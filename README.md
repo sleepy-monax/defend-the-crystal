@@ -1,1 +1,2 @@
-# mk-ld40
+# My lundum dare 40 game
+
