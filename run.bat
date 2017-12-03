@@ -1,0 +1,2 @@
+runtime\love.exe .
+pause

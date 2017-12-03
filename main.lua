@@ -5,6 +5,7 @@ GRAVITY = 0.5
 PARTICLE = true
 config_sound_effect = 1
 show_intro = true
+
 function love.load(arg)
   -- body...
   love.graphics.setDefaultFilter("nearest", "nearest", 0)
@@ -26,22 +27,24 @@ function load_ressources ()
   asset_monster_1 = love.graphics.newImage("assets/monster_1.png")
   asset_snowman= love.graphics.newImage("assets/snowman.png")
   asset_crystal_crack = love.graphics.newImage("assets/crystal_crack.png")
-
+  asset_heal = love.graphics.newImage("assets/healpack.png")
   asset_stick = love.graphics.newImage("assets/stick.png")
   asset_wall = love.graphics.newImage("assets/wall.png")
   asset_hotplate = love.graphics.newImage("assets/hot_plate.png")
   asset_slowplate = love.graphics.newImage("assets/slow_plate.png")
   asset_maker_logo = love.graphics.newImage("assets/maker.png")
   asset_tools_bar = love.graphics.newImage("assets/tools_bar.png")
-
+  asset_bomb = love.graphics.newImage("assets/bomb.png")
   assets_begin = "assets/begin.wave"
 end
 delta = 0
 function love.update(dt)
   delta = delta + dt
   handle_input()
-  if not show_intro then
+  if not show_intro and not game_over then
     game_update(dt)
+  else
+
   end
 end
 
@@ -67,20 +70,36 @@ splash_time = 0
 function love.draw()
   game_draw()
 
-  if splash_time < 200 and show_intro then
-    love.graphics.setColor(0,0,0, math.min(255, 255 * math.cos(splash_time / 100)))
+  if game_over then
+    love.graphics.setColor(0,0,0, 200)
     love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
-    love.graphics.setColor(255,255,255, math.min(255, 255 * math.cos(splash_time / 100)))
-    love.graphics.draw(asset_maker_logo, love.graphics.getWidth() / 2, love.graphics.getHeight() / 2, 0, 0.5, 0.5, asset_maker_logo:getWidth() / 2, asset_maker_logo:getHeight() / 2)
-    love.graphics.print("Present a game made in 48Hours for the 40th \"Ludum Dare\".", love.graphics.getWidth() / 2 - asset_maker_logo:getWidth() / 4 - 32, love.graphics.getHeight() / 2 + 64)
-    love.graphics.print("\"The more you have, the worst it is\".", love.graphics.getWidth() / 2 - asset_maker_logo:getWidth() / 4 - 32, love.graphics.getHeight() / 2 + 86)
     love.graphics.setColor(255,255,255,255)
-    splash_time = splash_time + 1
+    love.graphics.translate( 256, 256)
+    love.graphics.scale(2, 2)
+    love.graphics.print("Game Over", 0, 0)
+
+    love.graphics.print("killed monster: " .. score_kill_monster, 0, 32)
+    love.graphics.print("killed snowman: " .. score_kill_snowman, 0, 48)
+    love.graphics.print("killed bomb: " .. score_kill_bomb, 0, 64)
+    love.graphics.print("mana: " .. score_total_mana, 0, 80)
+    love.graphics.print("score: ".. score_total_mana + score_kill_monster + score_kill_snowman + score_kill_bomb * 10, 0, 96)
+
   else
-    show_intro = false
-    love.graphics.draw(asset_tools_bar, love.graphics.getWidth() / 2, love.graphics.getHeight() - 128, 0, 2, 2, asset_tools_bar:getWidth() / 2, asset_tools_bar:getHeight() / 2)
-    love.graphics.print("Mana: " .. player_mana, 128 , love.graphics.getHeight() - 128, 0 , 2,2)
-    love.graphics.print("\nHeal: " .. player_heal, 128 , love.graphics.getHeight() - 128, 0 , 2,2)
+    if splash_time < 314 and show_intro then
+      love.graphics.setColor(0,0,0, 255)
+      love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+      love.graphics.setColor(255,255,255, math.min(255, 255 * math.sin(splash_time / 100)))
+      love.graphics.draw(asset_maker_logo, love.graphics.getWidth() / 2, love.graphics.getHeight() / 2, 0, 1, 1, asset_maker_logo:getWidth() / 2, asset_maker_logo:getHeight() / 2)
+      love.graphics.print("Present a game made in 48Hours for the 40th \"Ludum Dare\".", love.graphics.getWidth() / 2 - asset_maker_logo:getWidth() / 4 - 32, love.graphics.getHeight() / 2 + 128)
+      love.graphics.print("Please enjoy it ! :)", love.graphics.getWidth() / 2 - 52, love.graphics.getHeight() / 2 + 148)
+      love.graphics.setColor(255,255,255,255)
+      splash_time = splash_time + 1
+    else
+      show_intro = false
+      love.graphics.draw(asset_tools_bar, love.graphics.getWidth() / 2, love.graphics.getHeight() - 128, 0, 2, 2, asset_tools_bar:getWidth() / 2, asset_tools_bar:getHeight() / 2)
+      love.graphics.print("Mana: " .. player_mana, 128 , love.graphics.getHeight() - 128, 0 , 2,2)
+      love.graphics.print("\nHeal: " .. player_heal, 128 , love.graphics.getHeight() - 128, 0 , 2,2)
+    end
   end
 end
 
@@ -114,8 +133,8 @@ function game_load (world_size)
   ground_width = 1600
   ground_height = 32
 
-  player_mana = 0
-  player_heal = 128
+  player_mana = 16
+  player_heal = 100
 
   -- game zone
   game_zone_x = -700
@@ -127,8 +146,16 @@ function game_load (world_size)
   entity_id_counter = 0
   entities = {}
 
+  wave = 0
+  game_over = false
+
   camera_x = player_x + (player_width / 2)
   camera_y = player_y + (player_height / 2)
+
+  score_kill_monster = 0
+  score_kill_snowman = 0
+  score_kill_bomb = 0
+  score_total_mana = 0
 
   add_entity(create_entity("portal", -world_size + 32, -96, "left"))
   add_entity(create_entity("portal", world_size - 38 - 32, -96, "right"))
@@ -185,6 +212,10 @@ function update_player (dt)
     player_speed_y = -10
   end
 
+  if player_heal < 0 then
+    game_over = true
+  end
+
   -- Update the player
   player_x = player_x + player_speed_x
   player_y = player_y + player_speed_y
@@ -205,30 +236,38 @@ function update_player (dt)
       else
           weapon = create_entity("melee", player_center_x, player_y, {from="player", facing = player_facing})
       end
-    end
+    elseif input_attack_2 and player_mana >= 1 then
+      player_mana = player_mana - 1
 
-    if input_attack_2 then
       if player_facing == "left" then
-          weapon = create_entity("star", player_center_x, player_y, {from="player", dir = -1})
+          weapon = create_entity("star", player_center_x, player_y + 16, {from="player", dir = -1})
       else
-          weapon = create_entity("star", player_center_x, player_y, {from="player", dir = 1})
+          weapon = create_entity("star", player_center_x, player_y + 16, {from="player", dir = 1})
+      end
+    elseif input_wall and player_mana >= 6 then
+      player_mana = player_mana - 6
+      weapon = create_entity("wall", player_center_x, player_y, nil)
+
+    elseif input_hot_plate and player_mana >= 4 then
+      player_mana = player_mana - 4
+      if player_facing == "left" then
+          weapon = create_entity("hot_plate", player_center_x - 48, player_y, nil)
+      else
+          weapon = create_entity("hot_plate", player_center_x, player_y, nil)
+      end
+    elseif input_slow_plate and player_mana >= 3 then
+      player_mana = player_mana - 3
+      if player_facing == "left" then
+          weapon = create_entity("slow_plate", player_center_x - 48, player_y, nil)
+      else
+          weapon = create_entity("slow_plate", player_center_x, player_y, nil)
       end
     end
 
-    if input_wall then
-      weapon = create_entity("wall", player_center_x, player_y, nil)
+    if not (weapon == nil) then
+      add_entity(weapon)
+      player_cooldown = player_max_cooldow
     end
-
-    if input_hot_plate then
-      weapon = create_entity("hot_plate", player_center_x, player_y, nil)
-    end
-
-    if input_slow_plate then
-      weapon = create_entity("slow_plate", player_center_x, player_y, nil)
-    end
-
-    add_entity(weapon)
-    player_cooldown = player_max_cooldow
   end
 end
 
@@ -254,9 +293,6 @@ function game_draw ()
     love.graphics.draw(asset_stick, player_x, player_y + 30, -(player_cooldown / player_max_cooldow * 2) - 3.14 / 2)
   end
   love.graphics.setColor(255, 255, 255, 255)
-  --love.graphics.draw(drawable, x, y, r, sx, sy, ox, oy, kx, ky)
-
-  love.graphics.points(mouse_world_x, mouse_world_y)
 
   if DEBUG then
     love.graphics.rectangle("line", game_zone_x, game_zone_y, game_zone_width, game_zone_height)
@@ -293,15 +329,25 @@ function update_entity ()
 
     -- Portal ------------------------------------------------------------------
     if v.type == "portal" then
-      if math.random(0, 300 ) == 5 then
+      if math.random(0, math.max(800 - delta * 5, 100) ) == 5 then
         add_entity(create_entity("monster", v.x, v.y, nil))
+        print("monster spawned")
         for i=1,50 do
           emite_particle(v.x+ math.random(0, v.width), v.y + math.random(0, v.height), math.random(-5, 5), math.random(-5, 5), math.random(0, 3), 255, 0, 255, math.random(0, 30))
         end
       end
 
-      if math.random(0, 500 ) == 5 then
+      if math.random(0, 3200) == 5 then
+        add_entity(create_entity("bomb", v.x, v.y, nil))
+        print("bomb spawned")
+        for i=1,50 do
+          emite_particle(v.x+ math.random(0, v.width), v.y + math.random(0, v.height), math.random(-5, 5), math.random(-5, 5), math.random(1, 5), 0, 0, 0, math.random(0, 100), true)
+        end
+      end
+
+      if math.random(0, math.max(1200 - delta * 5, 100)) == 5 then
         add_entity(create_entity("snowman", v.x, v.y, nil))
+        print("snowman spawned")
         for i=1,50 do
           emite_particle(v.x+ math.random(0, v.width), v.y + math.random(0, v.height), math.random(-5, 5), math.random(-5, 5), math.random(0, 3), 255, 255, 255, math.random(0, 30))
         end
@@ -328,7 +374,7 @@ function update_entity ()
     end
 
     -- Monsters ----------------------------------------------------------------
-    if v.type == "monster" or v.type == "snowman" then
+    if v.type == "monster" or v.type == "snowman" or v.type == "bomb" then
 
       if v.on_ground and ((v.speed_x < 1) or (v.speed_x > -1))  then
         if (v.x > 0) then
@@ -342,7 +388,7 @@ function update_entity ()
         if math.random(0, 100) == 5 then v.speed_y = -10 end
       end
 
-      if math.random(0, 150) == 5 then
+      if math.random(0, 100) == 5 then
         v.speed_x = -(v.speed_x * 2)
         v.speed_y = 0
           if v.type == "snowman" then
@@ -351,11 +397,11 @@ function update_entity ()
             else
                 add_entity(create_entity("snowball", v.x, v.y, {dir = 1}))
             end
-          else
+          elseif v.type == "monster" then
             if v.facing == "left" then
-              add_entity(create_entity("melee", v.x - 48, v.y, {from="monster", facing = v.facing}))
+              add_entity(create_entity("melee", v.x - 24, v.y, {from="monster", facing = v.facing}))
             else
-              add_entity(create_entity("melee", v.x + 48, v.y, {from="monster", facing = v.facing}))
+              add_entity(create_entity("melee", v.x + 24, v.y, {from="monster", facing = v.facing}))
             end
           end
 
@@ -421,7 +467,19 @@ function entity_colide_entity (a, b)
     end
   end
 
-  if (a.type == "snowball" or (b.type == "melee" and b.attr.from == "monster")) and (b.type == "crystal" or b.type == "wall" ) then
+  if (a.type == "monster" or a.type == "snowman") and b.type == "star" then
+    remove_entity(b)
+    for i=1,10 do
+      emite_particle(a.x + math.random(0, a.width), a.y + math.random(0, a.height), math.random(-10, 10 ) / 10, math.random(-10, 10 ) / 10, math.random(1, 3), 75,75,75, 100, true)
+    end
+    play_melee_sound = true
+      a.damages = a.damages + 1
+      a.damage_cool_down = 255
+
+  end
+
+
+  if ((a.type == "snowball" or (a.type == "melee" and a.attr.from == "monster"))) and (b.type == "crystal" or b.type == "wall" ) then
     b.damages = b.damages + 1
     b.damage_cool_down = 255
 
@@ -433,7 +491,19 @@ function entity_colide_entity (a, b)
     soundmanager_play("assets/crystal_hit.wav", 1)
   end
 
-  if (a.type == "monster" or a.type == "snowman") and b.type == "melee" and b.attr.from == "player" then
+  if a.type == "bomb" and (b.type == "crystal" or b.type == "wall") then
+    remove_entity(a)
+    b.damages = b.damages + 5
+    b.damage_cool_down = 255
+
+    soundmanager_play("assets/boom.wav", 1)
+    for i=1,math.random(0, 100) do
+       local b = math.random(-50, 50)
+       emite_particle(a.x + a.width / 2, a.y + a.height / 2, math.random(-100, 100 ) / 50, math.random(-200, 100 ) / 50, math.random(1, 5), 100 + b, 100 + b, 100 + b, math.random(0, 1000), true)
+    end
+  end
+
+  if (a.type == "monster" or a.type == "snowman" ) and b.type == "melee" and b.attr.from == "player" then
     if b.attr.facing == "left" then
       a.speed_x = -5
       a.speed_y = -5
@@ -444,6 +514,18 @@ function entity_colide_entity (a, b)
 
     a.damages = a.damages + 1
     play_melee_sound = true
+    b.damage_cool_down = 255
+  end
+
+  if (a.type == "bomb") and b.type == "melee" and b.attr.from == "player" then
+    remove_entity(a)
+    score_kill_bomb = score_kill_bomb + 1
+
+    soundmanager_play("assets/boom.wav", 1)
+    for i=1,math.random(0, 100) do
+       local b = math.random(-50, 50)
+       emite_particle(a.x + a.width / 2, a.y + a.height / 2, math.random(-100, 100 ) / 50, math.random(-200, 100 ) / 50, math.random(1, 5), 100 + b, 100 + b, 100 + b, math.random(0, 1000), true)
+    end
   end
 end
 
@@ -455,13 +537,31 @@ function entity_colide_player (entity)
     soundmanager_play("assets/coin.wav", 1)
     player_mana = player_mana + 1
     remove_entity(entity)
+    score_total_mana = score_total_mana + 1
+  end
+
+  if entity.type == "heal" then
+    soundmanager_play("assets/coin.wav", 1)
+    player_heal = player_heal + 1
+    remove_entity(entity)
   end
 
   if entity.type == "snowball" then
     play_melee_sound = true
+    player_heal = player_heal - 1
+    remove_entity(entity)
+    player_damage_cooldown = 255
+  end
+
+  if entity.type == "bomb" then
     player_heal = player_heal - 5
     remove_entity(entity)
     player_damage_cooldown = 255
+    soundmanager_play("assets/boom.wav", 1)
+    for i=1,math.random(0, 100) do
+       local b = math.random(-50, 50)
+       emite_particle(entity.x + entity.width / 2, entity.y + entity.height / 2, math.random(-100, 100 ) / 50, math.random(-200, 100 ) / 50, math.random(1, 5), 100 + b, 100 + b, 100 + b, math.random(0, 1000), true)
+    end
   end
 
   if entity.type == "melee" and entity.attr.from == "monster" then
@@ -491,6 +591,7 @@ function entity_died(entity)
        emite_particle(entity.x + entity.width / 2, entity.y + entity.height / 2, math.random(-100, 100 ) / 100, math.random(-100, 50 ) / 10, math.random(1, 10), 71 + b, 130 + b, 130 + b, math.random(0, 1000), true)
     end
     soundmanager_play("assets/crystal_hit.wav", 1)
+    game_over = true
   end
 
   if entity.type == "monster" then
@@ -498,9 +599,14 @@ function entity_died(entity)
       emite_particle(entity.x, entity.y + math.random(0, entity.height), math.random(-10, 10), math.random(-10, 0), math.random(0, 5), math.random(0, 255), 0, 0, 100, true)
     end
 
-    for i=1,math.random(1, 3) do
+    for i=1,math.random(0, 3) do
       emite_coin(entity.x, entity.y, math.random(-3, 3), math.random(-3, 0))
     end
+    for i=1,math.random(0, 1) do
+      emite_heal(entity.x, entity.y, math.random(-3, 3), math.random(-3, 0))
+    end
+
+    score_kill_monster = score_kill_monster + 1
   end
 
   if entity.type == "snowman" then
@@ -508,9 +614,15 @@ function entity_died(entity)
       emite_particle(entity.x, entity.y + math.random(0, entity.height), math.random(-30, 30) / 30, math.random(-10, 0) / 10, math.random(1, 10), 255, 255, 255, 300, true)
     end
 
-    for i=1,math.random(3, 5) do
+    for i=1,math.random(0, 4) do
       emite_coin(entity.x, entity.y, math.random(-3, 3), math.random(-3, 0))
     end
+
+    for i=1, math.random(0, 1) do
+      emite_heal(entity.x, entity.y, math.random(-3, 3), math.random(-3, 0))
+    end
+
+    score_kill_snowman = score_kill_snowman + 1
   end
 
   remove_entity(entity)
@@ -538,9 +650,13 @@ function draw_entities ()
 
     if v.type == "coin" then
       love.graphics.setPointSize(5)
-      love.graphics.setColor(247, 2013, 0, 255)
+      love.graphics.setColor(247, 213, 0, 255)
       love.graphics.points(v.x, v.y)
       love.graphics.setColor(255, 255, 255, 255)
+    end
+
+    if v.type == "heal" then
+      love.graphics.draw(asset_heal, v.x, v.y)
     end
 
     love.graphics.setColor(255 , 255 - v.damage_cool_down, 255 - v.damage_cool_down, 255)
@@ -557,6 +673,14 @@ function draw_entities ()
         love.graphics.draw(asset_monster_1, v.x + v.width, v.y, 0, -1, 1)
       else
         love.graphics.draw(asset_monster_1, v.x, v.y)
+      end
+    end
+
+    if v.type == "bomb" then
+      if v.facing == "left" then
+        love.graphics.draw(asset_bomb, v.x + v.width, v.y, 0, -1, 1)
+      else
+        love.graphics.draw(asset_bomb, v.x, v.y)
       end
     end
 
@@ -580,7 +704,7 @@ function draw_entities ()
     if DEBUG and v.debug then
       love.graphics.setColor(255, 0, 0, 255)
       love.graphics.rectangle("line", v.x, v.y, v.width, v.height)
-      love.graphics.print("id:" .. v.id .. "\nc" .. v.damage_cool_down, v.x, v.y)
+      --love.graphics.print("id:" .. v.id .. "\nc" .. v.damage_cool_down, v.x, v.y)
       love.graphics.setColor(255, 255, 255, 255)
     end
   end
@@ -594,6 +718,10 @@ end
 
 function emite_coin(x, y, sx, sy)
   add_entity(create_entity("coin", x, y, {sx = sx, sy = sy, gravity = gravity}))
+end
+
+function emite_heal(x, y, sx, sy)
+  add_entity(create_entity("heal", x, y, {sx = sx, sy = sy, gravity = gravity}))
 end
 
 function create_entity (type, x, y, attr)
@@ -643,13 +771,20 @@ function create_entity (type, x, y, attr)
     entity.damages = 0
   end
 
+  if type == "bomb" then
+    entity.width = 32
+    entity.height = 32
+    entity.gravity = true
+    entity.colide_box = true
+  end
+
   if type == "snowman" then
     entity.width = 21
     entity.height = 40
     entity.gravity = true
     entity.colide_box = true
 
-    entity.heal = 2 + (delta / 1000)
+    entity.heal = 2 + (delta / 100)
     entity.damages = 0
   end
 
@@ -672,6 +807,14 @@ function create_entity (type, x, y, attr)
   if type == "coin" then
     entity.width = 3
     entity.height = 3
+    entity.speed_x = attr.sx
+    entity.speed_y = attr.sy
+    entity.gravity = true
+  end
+
+  if type == "heal" then
+    entity.width = 16
+    entity.height = 16
     entity.speed_x = attr.sx
     entity.speed_y = attr.sy
     entity.gravity = true
@@ -702,7 +845,7 @@ function create_entity (type, x, y, attr)
     entity.width = 16
     entity.height = 48
     entity.y = -48
-    entity.heal = 5
+    entity.heal = 15
     entity.damages = 0
     entity.Gravity = false
   end
@@ -725,7 +868,6 @@ function create_entity (type, x, y, attr)
 end
 
 function add_entity (entity)
-  print("Entity " .. entity.id .. " " .. entity.type .. " Added")
   entities_counter = entities_counter + 1
   entities[entity.id] = entity
 end
