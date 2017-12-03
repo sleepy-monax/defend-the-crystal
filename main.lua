@@ -458,10 +458,15 @@ function entity_colide_entity (a, b)
 
   if (a.type == "monster" or a.type == "snowman") and b.type == "crystal" then a.speed_x = 0 end
   if (a.type == "monster" or a.type == "snowman") and b.type == "wall"    then a.speed_x = 0 end
-  if (a.type == "monster" or a.type == "snowman") and b.type == "slow_plate" then a.speed_x = a.speed_x / 2 end
+  if (a.type == "monster" or a.type == "snowman" or a.type == "bomb") and b.type == "slow_plate" then a.speed_x = a.speed_x / 3 end
 
   if (a.type == "monster" or a.type == "snowman") and b.type == "hot_plate" then
-    if math.random(0, 100) == 5 then
+    if math.random(0, 50) == 5 then
+
+      for i=1,10 do
+        emite_particle(a.x + math.random(0, a.width), a.y, math.random(-10, 10 ) / 10, math.random(-10, 0 ) / 10, math.random(1, 3), 255,75,75, 100, false)
+      end
+
       a.damages = a.damages + 1
       a.damage_cool_down = 255
     end
